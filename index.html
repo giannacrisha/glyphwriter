@@ -262,7 +262,7 @@ textarea.text { min-height: 72px; resize: vertical; }
 .thanks-x { position: absolute; top: 8px; right: 10px; width: 32px; height: 32px; border: 0; background: none; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; }
 .thanks-x:hover { color: var(--ink); }
 .thanks-kicker { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; }
-.thanks-title { margin: 0; font-family: Georgia, serif; font-size: 24px; color: var(--ink); }
+.thanks-title { margin: 0; font-family: "GliphoriaPreview", Georgia, serif; font-size: 30px; color: var(--ink); }
 .thanks-sub { margin: 0; font-size: 12px; color: var(--muted); }
 .thanks-actions { display: grid; gap: 10px; }
 .thanks-actions .btn { width: 100%; min-height: 48px; padding: 0 20px; font-size: 14px; }
@@ -601,7 +601,7 @@ const CONTROLS = {
     { id: "rough", label: "Extra grit", ends: ["None", "Gritty"], def: 0 }
   ],
   "g-type": [
-    { id: "sb", label: "Side spacing", ends: ["Tight", "Airy"], def: 45, max: 160, only: "prop" },
+    { id: "sb", label: "Side spacing", ends: ["Tight", "Airy"], def: 0, max: 160, only: "prop" },
     { id: "cell", label: "Cell width", ends: ["Narrow", "Wide"], def: 640, min: 380, max: 1000, step: 10, only: "mono" },
     { id: "space", label: "Word space", ends: ["Tight", "Wide"], def: 300, min: 120, max: 700, step: 10, only: "prop" },
     { id: "wobble", label: "Strike wobble", ends: ["Aligned", "Wobbly"], def: 20 },
@@ -615,7 +615,7 @@ const CONTROLS = {
 const ALL = Object.values(CONTROLS).flat();
 const ranges = ALL.map(c => c.id);
 const DEFAULT_META = { family: "Saludo Strike", style: "Regular", version: "1.000", designer: "", url: "", license: "OFL", vendor: "GLWR", copyright: "", description: "" };
-const DEFAULT_TOGGLES = { spacing: "mono", squeeze: true };
+const DEFAULT_TOGGLES = { spacing: "prop", squeeze: true };
 const STORE_KEY = "glyphwriter:v1";
 
 const S = { src: null, srcW: 0, srcH: 0, det: null, comps: [], groups: [], rows: [], chars: [], overrides: new Map(), traceCache: new Map(),
@@ -1969,7 +1969,7 @@ $("gfQuery").addEventListener("keydown", e => {
 
 /* ---------- Boot ---------- */
 $("order").value = DEFAULT_ORDER;
-document.querySelector('input[name="spacing"][value="mono"]').checked = true; $("squeeze").checked = true;
+document.querySelector('input[name="spacing"][value="prop"]').checked = true; $("squeeze").checked = true;
 load(); fillMeta(); readParams(true); setSample("pangram"); showTab(location.hash.slice(1)); paintRanges();
 const demo = $("demo"), start = () => loadSource(demo);
 if (demo.complete && demo.naturalWidth) start(); else demo.addEventListener("load", start);
