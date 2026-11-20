@@ -277,6 +277,10 @@ textarea.text { min-height: 72px; resize: vertical; }
 .thanks-seg { margin: 0; }
 .thanks-avail { margin: 0; font-size: 12px; }
 .thanks-back { justify-self: start; border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0; }
+.create-steps { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 13px; color: var(--ink); line-height: 1.4; }
+.create-steps li { padding-left: 2px; }
+#uploadLabel { position: relative; overflow: hidden; }
+#uploadLabel input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .thanks[hidden], .thanks-veil[hidden] { display: none; }
 body.commenting, body.commenting * { cursor: crosshair !important; }
 body.commenting #cPop, body.commenting #cPop *, body.commenting #cDrawer, body.commenting #cDrawer *, body.commenting #commentBtn { cursor: auto !important; }
@@ -363,11 +367,11 @@ body.dragging .dropveil { display: grid; }
 
 <div class="wrap">
   <header class="masthead">
-    <div class="left"><label class="btn outline tx file-btn">Upload<input id="file" type="file" accept="image/*" aria-label="Upload a glyph sheet image"></label></div>
+    <div class="left"><button class="btn outline tx" id="createBtn" type="button">Create</button></div>
     <h1 class="wordmark" id="wordmark">GLYPHWRITER</h1>
     <div class="right">
-      <button class="btn ghost tx" id="commentBtn" type="button" aria-pressed="false" aria-label="Comment mode" title="Comment"><svg aria-hidden="true"><use href="#i-comment"/></svg><span class="badge" id="cCount" hidden></span></button>
       <button class="btn solid tx" id="download" type="button">Download <span class="size" id="statSize"></span></button>
+      <button class="btn ghost tx" id="commentBtn" type="button" aria-pressed="false" aria-label="Feedback" title="Feedback"><svg aria-hidden="true"><use href="#i-comment"/></svg><span class="badge" id="cCount" hidden></span></button>
     </div>
   </header>
   <div class="rule heavy mast-rule"></div>
@@ -564,6 +568,25 @@ body.dragging .dropveil { display: grid; }
     <p class="thanks-avail" id="thxAvail"></p>
     <div class="field"><label class="lbl" for="thxEmail">Your email</label><input class="text" id="thxEmail" type="email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="you@email.com"></div>
     <button class="btn solid tx" id="thxSend" type="button">Compose email</button>
+  </div>
+</div>
+
+<div class="thanks-veil" id="createVeil" hidden></div>
+<div class="thanks" id="createModal" role="dialog" aria-modal="true" aria-labelledby="createTitle" hidden>
+  <button class="thanks-x" id="createClose" type="button" aria-label="Close">&times;</button>
+  <div class="thanks-screen">
+    <p class="thanks-kicker">Make a font</p>
+    <h2 class="thanks-title" id="createTitle">Create your font</h2>
+    <ol class="create-steps">
+      <li>Download the template and print it.</li>
+      <li>Write one letter per box, dark ink, inside the lines.</li>
+      <li>Scan or photograph the sheet.</li>
+      <li>Upload it here to build your font.</li>
+    </ol>
+    <div class="thanks-actions">
+      <button class="btn solid tx" id="getTemplate" type="button">Download template</button>
+      <label class="btn ghost tx file-btn" id="uploadLabel">Upload filled sheet<input id="file" type="file" accept="image/*" aria-label="Upload a glyph sheet image"></label>
+    </div>
   </div>
 </div>
 <div id="cHover" hidden aria-hidden="true"></div>
@@ -1482,6 +1505,58 @@ $("thxSend").addEventListener("click", () => {
   window.location.href = `mailto:${LINKS.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 });
 
+/* ---------- Create modal + template ---------- */
+const createEl = $("createModal"), createVeil = $("createVeil");
+let createLastFocus = null;
+function showCreate() { createLastFocus = document.activeElement; createVeil.hidden = false; createEl.hidden = false; requestAnimationFrame(() => $("getTemplate").focus()); }
+function hideCreate() { createEl.hidden = true; createVeil.hidden = true; if (createLastFocus && createLastFocus.focus) createLastFocus.focus(); }
+$("createBtn").addEventListener("click", showCreate);
+$("createClose").addEventListener("click", hideCreate);
+createVeil.addEventListener("click", hideCreate);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !createEl.hidden) hideCreate(); });
+
+async function buildTemplate() {
+  const DPI = 150, W = Math.round(8.5 * DPI), H = Math.round(11 * DPI), M = 90;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  const x = cv.getContext("2d");
+  x.fillStyle = "#ffffff"; x.fillRect(0, 0, W, H);
+  try { await document.fonts.load('64px "Gerif"'); } catch (e) {}
+  x.textBaseline = "alphabetic";
+  x.fillStyle = "#1a1a1a"; x.font = '64px "Gerif", Georgia, serif';
+  x.fillText("GLYPHWRITER", M, M + 50);
+  x.fillStyle = "#666"; x.font = '16px "Courier New", monospace';
+  x.fillText("FONT TEMPLATE", M, M + 78);
+  x.fillStyle = "#333"; x.font = '17px "Courier New", monospace';
+  x.fillText("Write one glyph per box in dark ink. Stay inside the lines.", M, M + 108);
+  // name / by fields
+  x.fillStyle = "#666"; x.font = '15px "Courier New", monospace';
+  const fy = M + 142;
+  x.fillText("Font name", M, fy); x.strokeStyle = "#cccccc"; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(M + 95, fy + 4); x.lineTo(M + 430, fy + 4); x.stroke();
+  x.fillText("By", M + 470, fy);
+  x.beginPath(); x.moveTo(M + 505, fy + 4); x.lineTo(W - M, fy + 4); x.stroke();
+  // grid
+  const chars = Array.from(DEFAULT_ORDER);
+  const cols = 6, cellW = (W - 2 * M) / cols, cellH = 116, gy = M + 180;
+  for (let i = 0; i < chars.length; i++) {
+    const r = Math.floor(i / cols), c = i % cols, cx = M + c * cellW, cy = gy + r * cellH;
+    x.strokeStyle = "#cfcfcf"; x.lineWidth = 1.5;
+    x.strokeRect(cx + 6, cy + 6, cellW - 12, cellH - 12);
+    x.save(); x.setLineDash([4, 5]); x.strokeStyle = "#e0e0e0"; x.lineWidth = 1;
+    const base = cy + cellH - 26; x.beginPath(); x.moveTo(cx + 6, base); x.lineTo(cx + cellW - 6, base); x.stroke(); x.restore();
+    x.fillStyle = "#b5b5b5"; x.font = '20px "Courier New", monospace'; x.textBaseline = "top";
+    x.fillText(chars[i], cx + 14, cy + 14); x.textBaseline = "alphabetic";
+  }
+  x.fillStyle = "#999"; x.font = '13px "Courier New", monospace';
+  x.fillText("glyphwriter  ·  giannacrisha.github.io/glyphwriter", M, H - 46);
+  cv.toBlob(b => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "glyphwriter-template.png";
+    document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast("Template downloaded");
+  }, "image/png");
+}
+$("getTemplate").addEventListener("click", buildTemplate);
+
 /* ---------- Events ---------- */
 const detectKeys = new Set(["speck", "merge"]);
 for (const id of ranges) $(id).addEventListener("input", () => {
@@ -1496,6 +1571,7 @@ $("order").addEventListener("input", () => { S.overrides.clear(); save(); if (S.
 
 function openFile(file) {
   if (!file || !file.type.startsWith("image/")) { toast("Use a PNG or JPG scan"); return; }
+  if (typeof hideCreate === "function") hideCreate();
   const url = URL.createObjectURL(file), img = new Image();
   img.onload = () => { setState("Reading"); setTimeout(() => loadSource(img), 20); };
   img.onerror = () => toast("That image could not be opened");
