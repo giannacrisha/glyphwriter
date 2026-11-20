@@ -9,6 +9,8 @@ Turn a scanned sheet of handwritten or typewritten letters into a real `.ttf` fo
 ![build step](https://img.shields.io/badge/build%20step-none-903D32)
 ![output](https://img.shields.io/badge/output-TrueType%20(.ttf)-903D32)
 
+![Glyphwriter turning a scanned sheet into a working font](assets/screenshot.png)
+
 ---
 
 ## Try it in two minutes
@@ -78,13 +80,17 @@ It does not yet export WOFF2, kern proportional pairs, or cycle alternate drawin
 
 ```
 index.html          the whole app: markup, styles, script, no build step
-assets/gerif.ttf    the display face used in the interface
+assets/            the gerif display face, icons, and social card
 CLAUDE.md           architecture notes and backlog
 ```
 
 ## Contributing
 
 Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the two rules that matter: stay at zero dependencies, and keep everything client-side.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ## Credits
 

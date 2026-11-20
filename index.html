@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Glyphwriter</title>
+<meta name="description" content="Turn a scanned sheet of hand-made letters into a real .ttf font, rough inky edges intact. Runs entirely in your browser.">
+<meta name="theme-color" content="#F2ECDE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#292722" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/favicon.png" sizes="512x512">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Glyphwriter">
+<meta property="og:description" content="Turn a scanned sheet of hand-made letters into a real .ttf font, rough inky edges intact. Runs entirely in your browser.">
+<meta property="og:url" content="https://giannacrisha.github.io/glyphwriter/">
+<meta property="og:image" content="https://giannacrisha.github.io/glyphwriter/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Glyphwriter">
+<meta name="twitter:description" content="Turn a scanned sheet of hand-made letters into a real .ttf font, rough inky edges intact.">
+<meta name="twitter:image" content="https://giannacrisha.github.io/glyphwriter/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&family=Libre+Caslon+Text:wght@400;700&family=Libre+Baskerville:wght@400;700&family=Old+Standard+TT:wght@400;700&family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
@@ -74,7 +90,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .masthead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px; padding: 66px 0 22px; }
 .masthead .left { justify-self: start; }
 .masthead .right { justify-self: end; display: flex; gap: 10px; align-items: center; }
-.wordmark { margin: 0; font-family: "GliphoriaPreview", Georgia, serif; font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: .01em; white-space: nowrap; color: var(--ink); }
+.wordmark { margin: 0; font-family: "Gerif", Georgia, serif; font-weight: 400; font-size: 40px; line-height: 1; letter-spacing: .01em; white-space: nowrap; color: var(--ink); }
 .mast-rule { margin-bottom: 26px; }
 
 /* Rows */
@@ -252,7 +268,7 @@ textarea.text { min-height: 72px; resize: vertical; }
 .contact .tag { margin-top: 12px; }
 .contact a, .contact .ph { font-size: 13px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .contact a:hover { text-decoration-thickness: 2px; }
-.bigmark { margin: 0; padding: 0 0 .06em; font-family: "GliphoriaPreview", Georgia, serif; line-height: 1; white-space: nowrap; text-align: center; color: var(--ink); font-size: 234px; user-select: none; }
+.bigmark { margin: 0; padding: 0 0 .06em; font-family: "Gerif", Georgia, serif; line-height: 1; white-space: nowrap; text-align: center; color: var(--ink); font-size: 234px; user-select: none; }
 
 /* Toast + comments */
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 16px); opacity: 0; z-index: 70;
@@ -1236,7 +1252,9 @@ async function applyPreview(bytes) {
   if (S.face) document.fonts.delete(S.face);
   S.face = face; S.family = `"${fam}", Georgia, serif`;
   $("spec").style.fontFamily = S.family;
-  $("wordmark").style.fontFamily = `"${fam}", Georgia, serif`; $("bigmark").style.fontFamily = `"${fam}", Georgia, serif`; fitBig();
+  /* The wordmark is branding, not a preview: it stays in gerif so it always reads
+     GLYPHWRITER, whatever the generated font maps to. */
+  fitBig();
   $("coverage").style.setProperty("--f", S.family);
 }
 
