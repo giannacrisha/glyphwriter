@@ -214,6 +214,10 @@ textarea.text { min-height: 72px; resize: vertical; }
 .cell.dupe { border-color: var(--accent); }
 .cell.dupe::after { content: "2×"; position: absolute; top: 4px; right: 6px; font-size: 10px; color: var(--accent); }
 .cell.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cell-x { position: absolute; top: 2px; left: 3px; width: 20px; height: 20px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms var(--ease-out); }
+.cell:hover .cell-x, .cell-x:focus-visible { opacity: 1; }
+.cell-x:hover { color: var(--accent); }
+.cell.skip .cell-x { display: none; }
 .sheet-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 29px 14px; font-size: 10px; color: var(--muted); text-transform: uppercase; }
 .sheet-foot .state { margin-left: 14px; }
 .sheet-foot .state[data-tone="warn"] { color: var(--accent); }
@@ -761,6 +765,7 @@ function loadSource(img) {
   for (let i = 0, j = 0; i < bin.length; i++, j += 4) bin[i] = (px[j] * .299 + px[j + 1] * .587 + px[j + 2] * .114) < 140 ? 1 : 0;
   S.det = { d, w, h, canvas: c };
   S.comps = components(bin, w, h);
+  autoTune();
   regroup();
 }
 
@@ -780,6 +785,53 @@ function components(bin, w, h) {
     out.push({ x0, y0, x1, y1, area, cy: (y0 + y1) / 2 });
   }
   return out;
+}
+
+/* Count the groups a given speck/merge pair would produce, without side effects.
+   Mirrors the grouping math in regroup(). */
+function countGroups(speckV, mergeV) {
+  const minArea = 2 + speckV * 1.2;
+  const comps = S.comps.filter(c => c.area >= minArea);
+  if (!comps.length) return 0;
+  const medH = median(comps.map(c => c.y1 - c.y0 + 1)) || 1;
+  const medW = median(comps.map(c => c.x1 - c.x0 + 1)) || 1;
+  const sorted = [...comps].sort((a, b) => a.cy - b.cy);
+  const rows = [];
+  for (const c of sorted) {
+    const r = rows[rows.length - 1];
+    if (!r || Math.abs(c.cy - r.mean) > medH * 0.75) rows.push({ items: [c], mean: c.cy });
+    else { r.items.push(c); r.mean += (c.cy - r.mean) / r.items.length; }
+  }
+  const gap = (mergeV / 100) * medW;
+  let n = 0;
+  for (const r of rows) {
+    r.items.sort((a, b) => a.x0 - b.x0);
+    let cur = null;
+    for (const c of r.items) {
+      if (cur && c.x0 <= cur.x1 + gap) cur.x1 = Math.max(cur.x1, c.x1);
+      else { cur = { x1: c.x1 }; n++; }
+    }
+  }
+  return n;
+}
+
+/* Choose speck filter and part joining so the detected glyph count lands on the
+   number of characters the sheet is meant to hold. Leaves the sliders alone when
+   no setting gets close, so an unusual sheet is not forced into a bad fit. */
+function autoTune() {
+  const want = Array.from($("order").value).filter(ch => !/\s/.test(ch)).length;
+  if (!want || !S.comps.length) return false;
+  let best = null;
+  for (let sp = 0; sp <= 60; sp += 2) {
+    for (let mg = 5; mg <= 70; mg += 5) {
+      const d = Math.abs(countGroups(sp, mg) - want);
+      if (!best || d < best.d || (d === best.d && sp < best.sp)) best = { d, sp, mg };
+    }
+  }
+  if (!best || best.d > Math.max(4, want * 0.25)) return false;
+  $("speck").value = best.sp; $("merge").value = best.mg;
+  readParams(true);
+  return true;
 }
 
 function regroup() {
@@ -1246,7 +1298,11 @@ function renderMap() {
     inp.setAttribute("aria-label", `Character for glyph ${i + 1}`);
     inp.addEventListener("input", () => setChar(i, inp.value, inp));
     inp.addEventListener("focus", () => select(i, true));
-    cell.append(btn, inp); map.append(cell);
+    const del = document.createElement("button"); del.type = "button"; del.className = "cell-x";
+    del.textContent = "\u00d7"; del.title = "Remove this glyph";
+    del.setAttribute("aria-label", `Remove glyph ${i + 1}`);
+    del.addEventListener("click", e => { e.stopPropagation(); deleteGlyph(i); });
+    cell.append(btn, inp, del); map.append(cell);
   });
 }
 function setChar(i, raw, src) {
@@ -1258,6 +1314,25 @@ function setChar(i, raw, src) {
   if (i === S.sel && src !== $("selChar")) $("selChar").value = ch;
   drawSheet(); schedule();
 }
+
+/* Remove a glyph from the font: clear its character so it is skipped. Offers undo. */
+function deleteGlyph(i) {
+  const prev = S.chars[i];
+  if (!prev) return;
+  setChar(i, "");
+  toast(`Removed ${prev}`, () => setChar(i, prev));
+}
+/* Backspace or Delete removes the selected glyph, as long as focus is not in a
+   text field and no dialog is open. */
+document.addEventListener("keydown", e => {
+  if (e.key !== "Backspace" && e.key !== "Delete") return;
+  const a = document.activeElement;
+  if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.isContentEditable)) return;
+  if (!$("thanks").hidden || !$("createModal").hidden) return;
+  if (S.sel < 0 || !S.groups[S.sel] || !S.chars[S.sel]) return;
+  e.preventDefault();
+  deleteGlyph(S.sel);
+});
 function renderThumbs() {
   const cells = $("map").children, byIdx = new Map((S.finished || []).map(f => [f.idx, f]));
   for (let i = 0; i < cells.length; i++) {
@@ -1529,23 +1604,21 @@ async function buildTemplate() {
   x.fillStyle = "#ffffff"; x.fillRect(0, 0, W, H);
   try { await document.fonts.load('64px "Gerif"'); } catch (e) {}
   x.textBaseline = "alphabetic";
-  x.fillStyle = "#1a1a1a"; x.font = '64px "Gerif", Georgia, serif';
+  // Everything printed on the template is a guide and must stay lighter than the
+  // detector's ink threshold (luminance 140), so only the user's ink is traced.
+  const GUIDE = "#AFC6DD", GUIDE_STRONG = "#8FAEC9";
+  x.fillStyle = GUIDE_STRONG; x.font = '64px "Gerif", Georgia, serif';
   x.fillText("GLYPHWRITER", M, M + 50);
-  x.fillStyle = "#666"; x.font = '16px "Courier New", monospace';
+  x.fillStyle = GUIDE; x.font = '16px "Courier New", monospace';
   x.fillText("FONT TEMPLATE", M, M + 78);
-  x.fillStyle = "#333"; x.font = '17px "Courier New", monospace';
+  x.font = '17px "Courier New", monospace';
   x.fillText("Write one glyph per box in dark ink. Stay inside the lines.", M, M + 108);
-  // name / by fields
-  x.fillStyle = "#666"; x.font = '15px "Courier New", monospace';
-  const fy = M + 142;
-  x.fillText("Font name", M, fy); x.strokeStyle = "#cccccc"; x.lineWidth = 1.5;
-  x.beginPath(); x.moveTo(M + 95, fy + 4); x.lineTo(M + 430, fy + 4); x.stroke();
-  x.fillText("By", M + 470, fy);
-  x.beginPath(); x.moveTo(M + 505, fy + 4); x.lineTo(W - M, fy + 4); x.stroke();
+  x.font = '15px "Courier New", monospace';
+  x.fillText("Write nothing outside the boxes. Name your font in the app.", M, M + 134);
   // grid
   const helplines = $("optHelp").checked, refs = $("optRef").checked;
   const chars = Array.from(DEFAULT_ORDER);
-  const cols = 6, cellW = (W - 2 * M) / cols, cellH = 120, gy = M + 180;
+  const cols = 6, cellW = (W - 2 * M) / cols, cellH = 120, gy = M + 170;
   for (let i = 0; i < chars.length; i++) {
     const r = Math.floor(i / cols), c = i % cols, cx = M + c * cellW, cy = gy + r * cellH;
     const bx = cx + 6, by = cy + 6, bw = cellW - 12, bh = cellH - 12;
@@ -1569,11 +1642,11 @@ async function buildTemplate() {
       x.beginPath(); x.moveTo(bx, baseY); x.lineTo(bx + bw, baseY); x.stroke(); x.restore();
     }
     // cell border + label (always)
-    x.strokeStyle = "#c2c2c2"; x.lineWidth = 1.5; x.strokeRect(bx, by, bw, bh);
-    x.fillStyle = "#444"; x.font = '18px "Courier New", monospace'; x.textAlign = "left"; x.textBaseline = "top";
+    x.strokeStyle = GUIDE; x.lineWidth = 1.5; x.strokeRect(bx, by, bw, bh);
+    x.fillStyle = GUIDE_STRONG; x.font = '18px "Courier New", monospace'; x.textAlign = "left"; x.textBaseline = "top";
     x.fillText(chars[i], bx + 8, by + 6); x.textBaseline = "alphabetic";
   }
-  x.fillStyle = "#999"; x.font = '13px "Courier New", monospace';
+  x.fillStyle = GUIDE; x.font = '13px "Courier New", monospace';
   x.fillText("glyphwriter  ·  giannacrisha.github.io/glyphwriter", M, H - 46);
   cv.toBlob(b => {
     const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "glyphwriter-template.png";
