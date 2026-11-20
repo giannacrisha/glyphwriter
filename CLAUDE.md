@@ -27,7 +27,7 @@ Scanned glyph sheet to TrueType font builder that preserves rough, typewritten e
 - Public at github.com/giannacrisha/glyphwriter, live on Pages, MIT licensed.
 - Create modal: printable template (helplines + character references, both optional), or upload a filled sheet.
 - Detection auto-tunes speck filter and part joining by matching the glyph count to `#order`.
-- Template chrome prints in non-photo blue above the luminance-140 ink threshold, so only the user's ink is traced.
+- Template prints entirely in light blue, and the detector drops light bluish pixels (`b > r * 1.15 && L > 75`) before the luminance-140 threshold. A scan can darken the page 30% and the guides are still ignored, while dark ink and blue pen are still read.
 - Glyph delete: select plus Backspace, or the hover x on a cell. Both undoable.
 - Wordmark and bigmark are pinned to the static gerif face, never the generated font.
 - Favicon, apple-touch-icon, Open Graph card, post-download support panel.

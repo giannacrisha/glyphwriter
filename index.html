@@ -782,7 +782,15 @@ function loadSource(img) {
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
   const px = ctx.getImageData(0, 0, w, h).data;
   const bin = new Uint8Array(w * h);
-  for (let i = 0, j = 0; i < bin.length; i++, j += 4) bin[i] = (px[j] * .299 + px[j + 1] * .587 + px[j + 2] * .114) < 140 ? 1 : 0;
+  /* The printed template is drawn in a light blue that stays chromatic even when a
+     scan or photo darkens the page, so drop light bluish pixels before thresholding.
+     Dark ink stays dark and neutral, and blue pen is dark enough to fall under the
+     lightness cutoff, so both are still read. */
+  for (let i = 0, j = 0; i < bin.length; i++, j += 4) {
+    const r = px[j], g = px[j + 1], b = px[j + 2];
+    const L = r * .299 + g * .587 + b * .114;
+    bin[i] = (!(b > r * 1.15 && L > 75) && L < 140) ? 1 : 0;
+  }
   S.det = { d, w, h, canvas: c };
   S.comps = components(bin, w, h);
   autoTune();
@@ -1632,6 +1640,7 @@ async function buildTemplate() {
   // Everything printed on the template is a guide and must stay lighter than the
   // detector's ink threshold (luminance 140), so only the user's ink is traced.
   const GUIDE = "#AFC6DD", GUIDE_STRONG = "#8FAEC9";
+  const GUIDE_REF = "#C8DAF0", GUIDE_LINE = "#CBDDF2", GUIDE_DOT = "#BFD3EC", GUIDE_BASE = "#A8C2DE";
   x.fillStyle = GUIDE_STRONG; x.font = '64px "Gerif", Georgia, serif';
   x.fillText("GLYPHWRITER", M, M + 50);
   x.fillStyle = GUIDE; x.font = '16px "Courier New", monospace';
@@ -1652,18 +1661,18 @@ async function buildTemplate() {
     const capY = wy0 + wh * 0.16, xhY = wy0 + wh * 0.46, baseY = wy0 + wh * 0.80, descY = wy0 + wh * 0.96;
     // faint background reference character, sitting on the baseline
     if (refs) {
-      x.save(); x.fillStyle = "#e4e4e4"; x.textAlign = "center"; x.textBaseline = "alphabetic";
+      x.save(); x.fillStyle = GUIDE_REF; x.textAlign = "center"; x.textBaseline = "alphabetic";
       x.font = Math.round(wh * 0.74) + 'px Helvetica, Arial, sans-serif';
       x.fillText(chars[i], cx + cellW / 2, baseY); x.restore();
     }
     // helplines
     if (helplines) {
       x.save(); x.lineWidth = 1;
-      x.strokeStyle = "#e8e8e8"; // cap + x-height, light
+      x.strokeStyle = GUIDE_LINE; // cap + x-height, light
       for (const yy of [capY, xhY]) { x.beginPath(); x.moveTo(bx, yy); x.lineTo(bx + bw, yy); x.stroke(); }
-      x.setLineDash([5, 5]); x.strokeStyle = "#dcdcdc"; // descender, dotted
+      x.setLineDash([5, 5]); x.strokeStyle = GUIDE_DOT; // descender, dotted
       x.beginPath(); x.moveTo(bx, descY); x.lineTo(bx + bw, descY); x.stroke();
-      x.setLineDash([]); x.strokeStyle = "#c4c4c4"; x.lineWidth = 1.4; // baseline, solid
+      x.setLineDash([]); x.strokeStyle = GUIDE_BASE; x.lineWidth = 1.4; // baseline, solid
       x.beginPath(); x.moveTo(bx, baseY); x.lineTo(bx + bw, baseY); x.stroke(); x.restore();
     }
     // cell border + label (always)
