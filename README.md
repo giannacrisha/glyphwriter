@@ -88,6 +88,8 @@ CLAUDE.md           architecture notes and backlog
 
 Issues and pull requests are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) covers the two rules that matter: stay at zero dependencies, and keep everything client-side.
 
+Found something on the live site? Click the feedback icon, pin a note on whatever is wrong, and hit **Send as GitHub issue**. It opens a prefilled issue from your own account.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
