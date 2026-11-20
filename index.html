@@ -770,6 +770,7 @@ document.addEventListener("input", e => {
 function loadSource(img) {
   S.src = img; S.srcW = img.naturalWidth || img.width; S.srcH = img.naturalHeight || img.height;
   S.overrides.clear(); S.traceCache.clear(); S.sel = -1;
+  FILL.scores = null;
   if (S.cellAuto) S.autoCell = true;
   const maxDim = 1600, d = Math.min(1, maxDim / Math.max(S.srcW, S.srcH));
   const w = Math.max(1, Math.round(S.srcW * d)), h = Math.max(1, Math.round(S.srcH * d));
@@ -850,7 +851,7 @@ function autoTune() {
   return true;
 }
 
-function regroup() {
+function regroup(keepOverrides) {
   const minArea = 2 + P.speck * 1.2;
   const comps = S.comps.filter(c => c.area >= minArea);
   const medH = median(comps.map(c => c.y1 - c.y0 + 1)) || 1;
@@ -876,6 +877,9 @@ function regroup() {
     groups.push(...rowGroups);
   });
   S.groups = groups;
+  /* Groups are renumbered here, and overrides are keyed by group index, so
+     keeping them would pin characters to the wrong glyphs. Undo restores its own. */
+  if (!keepOverrides) S.overrides.clear();
   S.traceCache.clear();
   loadAdjust();
   assign();
@@ -942,7 +946,7 @@ function march(v, W, H, t) {
     const bottom = dd !== c ? ptH(x, y + 1) : -1, left = a !== dd ? ptV(x, y) : -1;
     if (idx === 5 || idx === 10) {
       const center = (va + vb + vc + vd) / 4 >= t;
-      if ((idx === 5) === center) segs.push([top, right], [bottom, left]);
+      if ((idx === 5) !== center) segs.push([top, right], [bottom, left]);
       else segs.push([top, left], [right, bottom]);
     } else {
       const e = [top, right, bottom, left].filter(z => z >= 0);
@@ -1011,7 +1015,7 @@ function layout() {
       $("cell").value = Math.min(1000, Math.max(380, c)); readParams(true); }
     S.autoCell = false;
   }
-  const key = [P.weight, P.smooth, P.simplify, P.speck, P.pressure, seed, k.toFixed(4)].join("|");
+  const key = [P.weight, P.smooth, P.simplify, P.speck, P.pressure, P.detail, seed, k.toFixed(4)].join("|");
 
   const glyphs = [];
   S.groups.forEach((g, i) => {
@@ -1563,7 +1567,7 @@ $("reset").addEventListener("click", () => {
   S.overrides.clear(); S.cellAuto = true; S.autoCell = true; S.traceCache.clear();
   readParams(); if (S.src) regroup();
   toast("Settings reset", () => {
-    applySnapshot(before.snap); S.overrides = before.overrides; S.adjust = before.adjust; saveAdjust(); S.autoCell = false; S.traceCache.clear(); save(); if (S.src) regroup();
+    applySnapshot(before.snap); S.overrides = before.overrides; S.adjust = before.adjust; saveAdjust(); S.autoCell = false; S.traceCache.clear(); save(); if (S.src) regroup(true);
   });
 });
 
@@ -1635,7 +1639,7 @@ async function buildTemplate() {
   x.fillText("Write nothing outside the boxes. Name your font in the app.", M, M + 134);
   // grid
   const helplines = $("optHelp").checked, refs = $("optRef").checked;
-  const chars = Array.from(DEFAULT_ORDER);
+  const chars = Array.from($("order").value).filter(ch => !/\s/.test(ch));
   const cols = 6, cellW = (W - 2 * M) / cols, cellH = 120, gy = M + 170;
   for (let i = 0; i < chars.length; i++) {
     const r = Math.floor(i / cols), c = i % cols, cx = M + c * cellW, cy = gy + r * cellH;
@@ -1841,7 +1845,7 @@ loadFill();
 
 function loadFill() { try { const o = JSON.parse(localStorage.getItem("glyphwriter:fill")); if (o) { Object.assign(FILL, o, { off: new Set(o.off || []), scores: null, busy: false, key: "" }); } } catch (e) {} }
 function saveFill() { try { const { on, sets, source, weight, grit, width, custom } = FILL; localStorage.setItem("glyphwriter:fill", JSON.stringify({ on, sets, source, weight, grit, width, custom, off: [...FILL.off] })); } catch (e) {} }
-const herRaw = c => { const g = (S.layoutGlyphs || []).find(gl => gl && gl.ch === c); return g ? g.raw : null; };
+const herRaw = c => { const g = (S.layoutGlyphs || []).find(gl => gl && gl.ch === c); return g && g.raw && g.raw.length ? g.raw : null; };
 const herKey = () => [P.weight, P.smooth, P.simplify, P.detail, P.rough, S.chars.join("")].join("|");
 const genKey = () => JSON.stringify([herKey(), FILL.sets, FILL.source, FILL.weight, FILL.grit, FILL.width]);
 function bbox(cs) { let a = 1e9, b = -1e9, c = 1e9, d = -1e9; for (const L of cs) for (const [x, y] of L) { if (x < a) a = x; if (x > b) b = x; if (y < c) c = y; if (y > d) d = y; } return { x0: a, x1: b, y0: c, y1: d }; }

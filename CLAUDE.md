@@ -23,12 +23,20 @@ Scanned glyph sheet to TrueType font builder that preserves rough, typewritten e
 6. **Google Fonts search**: `GF_LIST`, `registerGoogleFont`, combobox UI.
 7. **UI**: tabs, workbench loupe (`drawLoupe`, `drawLoupeGen`), steppers, coverage strip, sheet cells, comment mode, persistence in `localStorage` (`glyphwriter:*` keys).
 
-## First tasks
+## Done since launch
+- Public at github.com/giannacrisha/glyphwriter, live on Pages, MIT licensed.
+- Create modal: printable template (helplines + character references, both optional), or upload a filled sheet.
+- Detection auto-tunes speck filter and part joining by matching the glyph count to `#order`.
+- Template chrome prints in non-photo blue above the luminance-140 ink threshold, so only the user's ink is traced.
+- Glyph delete: select plus Backspace, or the hover x on a cell. Both undoable.
+- Wordmark and bigmark are pinned to the static gerif face, never the generated font.
+- Favicon, apple-touch-icon, Open Graph card, post-download support panel.
+
+## Open tasks
 1. Split `index.html` into `index.html`, `styles.css`, and ES modules (`detect.js`, `trace.js`, `ttf.js`, `fill.js`, `ui.js`). No bundler.
 2. Move the embedded demo scan (base64 PNG in `<img id="demo">`) to `assets/demo-sheet.png`.
-3. Remove the claude.ai-only download path (`window.claude.use("downloads")`); the `<a download>` fallback is what GitHub Pages uses.
-4. Fill the footer placeholders (LinkedIn, GitHub, email) once Gi provides them.
-5. Add a smoke test: headless Chromium loads the page, waits for "Ready", downloads the font, and `fontTools` validates it.
+3. Add a smoke test: headless Chromium loads the page, waits for "Ready", downloads the font, and `fontTools` validates it.
+4. Add a demo GIF to the README (sheet to font).
 
 ## Backlog (ask Gi before starting any)
 - Per-letter editor: erase specks, redraw, flip, rotate.
