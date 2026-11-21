@@ -287,15 +287,13 @@ textarea.text { min-height: 72px; resize: vertical; }
 .thanks-sub { margin: 0; font-size: 12px; color: var(--muted); }
 .thanks-actions { display: grid; gap: 10px; }
 .thanks-actions .btn { width: 100%; min-height: 48px; padding: 0 20px; font-size: 14px; }
-.thanks-avail { color: var(--accent); }
 .thanks-made { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .thanks-byline { margin: 0; font-size: 12px; color: var(--muted); }
 .thanks-links { display: flex; gap: 6px; }
 .thanks-links a { display: grid; place-items: center; width: 34px; height: 34px; color: var(--muted); border: 1px solid var(--line); }
 .thanks-links a:hover { color: var(--accent); border-color: var(--accent); }
 .thanks-links svg { width: 18px; height: 18px; }
-.thanks-seg { margin: 0; }
-.thanks-avail { margin: 0; font-size: 12px; }
+#thxNote { min-height: 88px; resize: vertical; font-family: inherit; }
 .thanks-back { justify-self: start; border: 0; background: none; color: var(--accent); font-size: 12px; cursor: pointer; padding: 0; }
 .create-steps { margin: 0; padding-left: 20px; display: grid; gap: 7px; font-size: 13px; color: var(--ink); line-height: 1.4; }
 .create-steps li { padding-left: 2px; }
@@ -584,14 +582,10 @@ body.dragging .dropveil { display: grid; }
   </div>
   <div class="thanks-screen" id="thxCoffeeScreen" hidden>
     <button class="thanks-back" id="thxBack" type="button">&larr; Back</button>
-    <h2 class="thanks-title">Let's grab coffee</h2>
-    <p class="thanks-sub">Pick a city and I'll show when I'm around. Add your email, then send.</p>
-    <div class="seg thanks-seg" role="radiogroup" aria-label="City">
-      <label><input type="radio" name="thxCity" value="Boston" checked>Boston</label>
-      <label><input type="radio" name="thxCity" value="New York">New York</label>
-    </div>
-    <p class="thanks-avail" id="thxAvail"></p>
+    <h2 class="thanks-title">Say hi</h2>
+    <p class="thanks-sub">Your email and a quick note. It opens in your mail app, addressed to Gi.</p>
     <div class="field"><label class="lbl" for="thxEmail">Your email</label><input class="text" id="thxEmail" type="email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="you@email.com"></div>
+    <div class="field"><label class="lbl" for="thxNote">Note</label><textarea class="text" id="thxNote" rows="4" placeholder="Made a font for my zine. Thank you!"></textarea></div>
     <button class="btn solid tx" id="thxSend" type="button">Compose email</button>
   </div>
 </div>
@@ -1601,22 +1595,18 @@ const thxEl = $("thanks"), thxVeil = $("thanksVeil");
 let thxLastFocus = null;
 $("thxStar").href = LINKS.github;
 function showThxScreen(which) { $("thxMain").hidden = which !== "main"; $("thxCoffeeScreen").hidden = which !== "coffee"; }
-function selectedCity() { const r = document.querySelector('input[name="thxCity"]:checked'); return r ? r.value : "Boston"; }
-function cityAvail(city) { return city === "New York" ? "In New York, Friday to Sunday." : "In Boston, Monday to Thursday."; }
-function updateAvail() { $("thxAvail").textContent = cityAvail(selectedCity()); }
-function showThanks() { thxLastFocus = document.activeElement; showThxScreen("main"); updateAvail(); thxVeil.hidden = false; thxEl.hidden = false; requestAnimationFrame(() => $("thxStar").focus()); }
+function showThanks() { thxLastFocus = document.activeElement; showThxScreen("main"); thxVeil.hidden = false; thxEl.hidden = false; requestAnimationFrame(() => $("thxStar").focus()); }
 function hideThanks() { thxEl.hidden = true; thxVeil.hidden = true; if (thxLastFocus && thxLastFocus.focus) thxLastFocus.focus(); }
 $("thanksClose").addEventListener("click", hideThanks);
 thxVeil.addEventListener("click", hideThanks);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !thxEl.hidden) hideThanks(); });
-$("thxCoffee").addEventListener("click", () => { showThxScreen("coffee"); updateAvail(); requestAnimationFrame(() => $("thxEmail").focus()); });
+$("thxCoffee").addEventListener("click", () => { showThxScreen("coffee"); requestAnimationFrame(() => $("thxEmail").focus()); });
 $("thxBack").addEventListener("click", () => { showThxScreen("main"); requestAnimationFrame(() => $("thxStar").focus()); });
-document.querySelectorAll('input[name="thxCity"]').forEach(r => r.addEventListener("change", updateAvail));
 $("thxSend").addEventListener("click", () => {
-  const city = selectedCity();
   const email = ($("thxEmail").value || "").trim();
-  const subject = "Coffee + Glyphwriter";
-  const body = `Hi Gi,\n\nI used Glyphwriter and loved it. I'd love to grab coffee in ${city}.\n\nYou can reach me at ${email || "[your email]"}.\n\nTalk soon!`;
+  const note = ($("thxNote").value || "").trim();
+  const subject = "Hi from Glyphwriter";
+  const body = `${note || "[your note]"}\n\nReach me at: ${email || "[your email]"}\n\nSent from Glyphwriter`;
   window.location.href = `mailto:${LINKS.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 });
 
